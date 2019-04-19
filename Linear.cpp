@@ -21,8 +21,8 @@ vector<string> split(const string& s, char delimiter)
 
 void linear(vector<string> splited)
 {
-	map<vector<string>, int> labels;//в векторе две вещи:используемое значение и значение break
-	vector<vector<string>> labels2;//здесь в каждом векторе :сравниваемое значение, используемое значение, значение break и количество меток
+	map<vector<string>, int> labels;//in vector two things:used vaule and break
+	vector<vector<string>> labels2;//here in every vector:case value, used value, break and amount of labels
 	int counterLab=0 ;
 	fstream output;
 	output.open("linear.txt",ios_base::out);
@@ -119,7 +119,7 @@ void sort(string **&array, int n, int m)
 		}
 	}
 }
-void tree(fstream &output, string **&cTOz, int IndexStart,int IndexEnd, map<vector<string>, int> labels, int labelsBranch,int &totalLabelsBranch)
+void tree(fstream &output, string **cTOz, int IndexStart,int IndexEnd, map<vector<string>, int> labels, int labelsBranch,int &totalLabelsBranch)
 {
 	int middle = (IndexEnd-IndexStart) / 2;
 	
@@ -143,12 +143,16 @@ void tree(fstream &output, string **&cTOz, int IndexStart,int IndexEnd, map<vect
 
 }
 
+bool comp(string* a,string* b)
+{
+	return a[3] < b[3];
+}
 void log(vector<string> splited)
 {
-	string **cTOz; // pares of case and values and break parametr and order index
+	string **cTOz; // parametrs: case, values, break parametr, order index
 	int cTOzcounter = 0;
 	vector<string> default3;
-	map<vector<string>, int> labels;//ключ-присваиваемое значение и break, второй параметр- номер метки
+	map<vector<string>, int> labels;//key-used value and break, second parametr- label number
 	int counterLab = 0;
 	
 	for (int i = 0; i < splited.size(); i++)
@@ -186,46 +190,22 @@ void log(vector<string> splited)
 	}
 
 	sort(cTOz, cTOzcounter, 4);
-
+	
 	fstream output;
 	output.open("binary.txt", ios_base::out);
 	output.clear();
 	int t = counterLab;
 	tree(output, cTOz,0, cTOzcounter-1, labels, counterLab,t);
 
-	for (auto& item : labels)
+	sort(cTOz, cTOz + cTOzcounter, comp);
+	for (int i = 0; i < cTOzcounter; i++)
 	{
-		output <<endl<< ".L" << item.second << endl;
-		output << "mov r0," << item.first[0]<<endl;
-		if (item.first[1] == "1")
-			output << "bx lr"<<endl;
-		else
-		{
-
-			int i = 0;
-			while (cTOz[i][1]!=item.first[0] || cTOz[i][2]!=item.first[1])
-			{
-				i++;
-			}
-			int it =atoi(&cTOz[i][3][0]) + 1;
-			if (it != cTOzcounter)
-			{
-				i = 0;
-				while (atoi(&cTOz[i][3][0]) != it)
-				{
-					i++;
-				}
-				output << "b .L" << labels.find(vector<string>{cTOz[i][1], cTOz[i][2]})->second << endl;
-			}
-			else
-			{
-				output << "b .L" << counterLab-1 << endl;
-
-			}
-
-		}
+		output << endl << ".L" << labels.find(vector<string>{cTOz[i][1],cTOz[i][2]})->second << endl;
+		output << "mov r0," << cTOz[i][1] << endl;
+		if (cTOz[i][2] == "1")
+			output << "bx lr" << endl;
 	}
-	
+
 	output << endl << ".L" <<counterLab-1 << endl;
 	output << "mov r0," << default3[0] << endl;
 	output << "bx lr";
