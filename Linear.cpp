@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include <cstdlib> 
 #include <fstream>
@@ -97,14 +98,15 @@ void linear(vector<string> splited)
 
 	output.close();
 }
-void sort(string **&array, int n, int m)
+
+void sort(string **&array, int n, int m,int param)
 {
 	int i = 0;
 	string *buf;
 	char swap_cnt = 0;
 	while (i < n)
 	{
-		if (i + 1 != n && array[i][0] > array[i + 1][0])
+		if (i + 1 != n && array[i][param] > array[i + 1][param])
 		{
 			buf = array[i];
 			array[i] = array[i + 1];
@@ -119,7 +121,7 @@ void sort(string **&array, int n, int m)
 		}
 	}
 }
-void tree(fstream &output, string **cTOz, int IndexStart,int IndexEnd, map<vector<string>, int> labels, int labelsBranch,int &totalLabelsBranch)
+void tree(fstream &output, string **cTOz, int IndexStart,int IndexEnd, map<vector<string>, int> labels, int labelsBranch,int &totalLabelsBranch,vector<string> default3)
 {
 	int middle = (IndexEnd-IndexStart) / 2;
 	
@@ -132,17 +134,18 @@ void tree(fstream &output, string **cTOz, int IndexStart,int IndexEnd, map<vecto
 	}
 	if (middle+ IndexStart != IndexEnd)
 	{
-		tree(output, cTOz, middle + IndexStart + 1, IndexEnd, labels, labelsBranch, totalLabelsBranch);
+		tree(output, cTOz, middle + IndexStart + 1, IndexEnd, labels, labelsBranch, totalLabelsBranch,default3);
 	}
 	if (IndexStart != middle + IndexStart)
 	{
 		output << endl << ".L" << --labelsBranch << endl;
 		labelsBranch = totalLabelsBranch;
-		tree(output, cTOz, IndexStart, middle + IndexStart - 1, labels, labelsBranch, totalLabelsBranch);
+		tree(output, cTOz, IndexStart, middle + IndexStart - 1, labels, labelsBranch, totalLabelsBranch,default3);
 	}
+	if (IndexEnd == IndexStart)
+		output << "bne .L"<<default3[2] << endl;
 
 }
-
 bool comp(string* a,string* b)
 {
 	return a[3] < b[3];
@@ -151,7 +154,7 @@ void log(vector<string> splited)
 {
 	string **cTOz; // parametrs: case, values, break parametr, order index
 	int cTOzcounter = 0;
-	vector<string> default3;
+	vector<string> default3;//params: value, default, label number
 	map<vector<string>, int> labels;//key-used value and break, second parametr- label number
 	int counterLab = 0;
 	
@@ -185,25 +188,32 @@ void log(vector<string> splited)
 			
 			default3.push_back(splited[j]);
 			default3.push_back("1");
+			char temp[2]="";
+			_itoa(counterLab, temp, 10);
+			default3.push_back(temp);
 			counterLab++;
 		}
 	}
 
-	sort(cTOz, cTOzcounter, 4);
+	sort(cTOz, cTOzcounter, 4,0);
 	
 	fstream output;
 	output.open("binary.txt", ios_base::out);
 	output.clear();
 	int t = counterLab;
-	tree(output, cTOz,0, cTOzcounter-1, labels, counterLab,t);
+	tree(output, cTOz,0, cTOzcounter-1, labels, counterLab,t,default3);
 
 	sort(cTOz, cTOz + cTOzcounter, comp);
 	for (int i = 0; i < cTOzcounter; i++)
 	{
-		output << endl << ".L" << labels.find(vector<string>{cTOz[i][1],cTOz[i][2]})->second << endl;
-		output << "mov r0," << cTOz[i][1] << endl;
-		if (cTOz[i][2] == "1")
-			output << "bx lr" << endl;
+		if (labels.find(vector<string>{cTOz[i][1], cTOz[i][2]}) != labels.end())
+		{
+			output << endl << ".L" << labels.find(vector<string>{cTOz[i][1], cTOz[i][2]})->second << endl;
+			output << "mov r0," << cTOz[i][1] << endl;
+			if (cTOz[i][2] == "1")
+				output << "bx lr" << endl;
+			labels.erase(labels.find(vector<string>{cTOz[i][1], cTOz[i][2]}));
+		}
 	}
 
 	output << endl << ".L" <<counterLab-1 << endl;
@@ -214,6 +224,102 @@ void log(vector<string> splited)
 	for (int i = 0; i < 3; i++)
 		delete[] cTOz[i];
 }
+
+void table(vector<string> splited)
+{
+	string **cTOz; // parametrs: case, values, break parametr, order index
+	int cTOzcounter = 0;
+	vector<string> default3; //params: value, default, label number
+	map<vector<string>, int> labels;//key-used value and break, second parametr- label number
+	int counterLab = 1;
+
+	for (int i = 0; i < splited.size(); i++)
+	{
+		if (splited[i] == "case")
+			cTOzcounter++;
+	}
+	cTOz = new string*[cTOzcounter];
+	for (int i = 0; i < cTOzcounter; i++)
+	{
+		cTOz[i] = new string[4];
+		cTOz[i][3] = to_string(i);
+	}
+	for (int i = 0, j = 0; j < splited.size(); j++)
+	{
+		if (splited[j] == "case")
+		{
+			cTOz[i][0] = splited[++j][1];
+			j += 4;
+			cTOz[i][1] = splited[j];
+			cTOz[i][2] = splited[j + 2] == "break" ? "1" : "0";
+			labels.insert(pair<vector<string>, int>(vector<string>{splited[j], cTOz[i][2]}, counterLab));
+			counterLab = labels.size()+1;
+			i++;
+		}
+		if (splited[j] == "default")
+		{
+			j += 4;
+
+			default3.push_back(splited[j]);
+			default3.push_back("1");
+			char temp[2] = "";
+			_itoa(counterLab, temp, 10);
+			default3.push_back(temp);
+			counterLab++;
+		}
+	}
+	sort(cTOz, cTOzcounter, 4, 0);
+
+	fstream output;
+	output.open("table.txt", ios_base::out);
+	output.clear();
+	output << "sub r0, r0, " << cTOz[0][0] << endl;
+	output << "and r0, r0, #255" << endl;
+	output << "cmp r0, '" << cTOz[cTOzcounter - 1][0] << "'" << endl;
+	output << "ldrls r3, .L0" << endl;
+	output << "ldrls r0, [r3,r0, lsl #2]" << endl;
+	output << "movhi r0, " << default3[0] << endl;
+	output << "bx lr" << endl;
+	output << ".set    .LANCHOR0,. + 0" << endl;
+	output << ".type   CSWTCH.0, %object" << endl;
+	int memory = atoi(cTOz[cTOzcounter - 1][0].c_str())-atoi(cTOz[0][0].c_str()) + 1;
+	memory *= 4;
+	output << ".size   CSWTCH.0, "<< memory << endl;
+	output << "CSWTCH.0:" << endl;
+	int i = 0;
+	for (char j=cTOz[0][0][0]; j<=cTOz[cTOzcounter-1][0][0]; j++)
+	{
+		if (cTOz[i][0][0] == j)
+		{
+			output << ".word .L" << labels.find(vector<string>{cTOz[i][1], cTOz[i][2]})->second << endl;
+			i++;
+		}
+		else
+			output << ".word .L0" << endl;
+	}
+	output << ".text"<<endl;
+	
+	sort(cTOz, cTOz + cTOzcounter, comp);
+	for (int i = 0; i < cTOzcounter; i++)
+	{
+		if (labels.find(vector<string>{cTOz[i][1], cTOz[i][2]})!=labels.end())
+		{
+			output << endl << ".L" << labels.find(vector<string>{cTOz[i][1], cTOz[i][2]})->second << endl;
+			output << "mov r0, " << cTOz[i][1] << endl;
+			if (cTOz[i][2] == "1")
+				output << "bx lr" << endl;
+			labels.erase(vector<string>{cTOz[i][1], cTOz[i][2]});
+		}
+	}
+
+	output << endl << ".L" << 0 << endl;
+	output << "mov r0," << default3[0] << endl;
+	output << "bx lr";
+	output.close();
+	for (int i = 0; i < 3; i++)
+		delete[] cTOz[i];
+}
+
 int main()
 {
 	int tmp=' ';
@@ -257,13 +363,15 @@ int main()
 	for (vector<string>::iterator it = *&splited.begin(); it != splited.end(); ++it)
 		std::cout << *it<<endl;
 
-	std::cout << "1-linear\n2-log" << endl;
+	std::cout << "1-linear\n2-log\n3-table" << endl;
 	int tmb;
 	std::cin >> tmb;
 	if (tmb == 1)
 		linear(splited);
 	else if (tmb == 2)
 		log(splited);
+	else if (tmb == 3)
+		table(splited);
 	
 	std::cout << endl;
 	//system("pause"); 
